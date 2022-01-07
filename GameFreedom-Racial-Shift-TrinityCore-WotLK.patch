@@ -1,0 +1,536 @@
+From: Game-Freedom <gamefreedom@protonmail.com>
+Date: Fri, 7 Jan 2022 22:11:31 +0100
+Subject: [PATCH] Racial Shift feature.
+
+---
+ .../2022_01_07_00_racialshift_characters.sql  |   2 +
+ .../3.3.5/2022_01_07_00_racialshift_world.sql |  24 +++
+ .../Implementation/CharacterDatabase.cpp      |   8 +-
+ src/server/game/Entities/Player/Player.cpp    | 121 +++++++++++++-
+ src/server/game/Entities/Player/Player.h      |   7 +
+ src/server/game/World/World.cpp               |   5 +
+ src/server/game/World/World.h                 |   3 +
+ src/server/scripts/World/npcs_special.cpp     | 150 ++++++++++++++++++
+ src/server/shared/SharedDefines.h             |  33 ++++
+ 9 files changed, 347 insertions(+), 6 deletions(-)
+ create mode 100644 sql/updates/characters/3.3.5/2022_01_07_00_racialshift_characters.sql
+ create mode 100644 sql/updates/world/3.3.5/2022_01_07_00_racialshift_world.sql
+
+diff --git a/sql/updates/characters/3.3.5/2022_01_07_00_racialshift_characters.sql b/sql/updates/characters/3.3.5/2022_01_07_00_racialshift_characters.sql
+new file mode 100644
+index 0000000000..78c280095f
+--- /dev/null
++++ b/sql/updates/characters/3.3.5/2022_01_07_00_racialshift_characters.sql
+@@ -0,0 +1,2 @@
++ALTER TABLE `characters`
++	ADD COLUMN `chosen_racial` INT(10) UNSIGNED NOT NULL DEFAULT '0' AFTER `deleteDate`;
+diff --git a/sql/updates/world/3.3.5/2022_01_07_00_racialshift_world.sql b/sql/updates/world/3.3.5/2022_01_07_00_racialshift_world.sql
+new file mode 100644
+index 0000000000..bfa2bb4e54
+--- /dev/null
++++ b/sql/updates/world/3.3.5/2022_01_07_00_racialshift_world.sql
+@@ -0,0 +1,24 @@
++SET @CREATURE_ID := 60000;
++DELETE FROM `creature_template` WHERE `entry`=@CREATURE_ID;
++INSERT INTO `creature_template` (`entry`, `difficulty_entry_1`, `difficulty_entry_2`, `difficulty_entry_3`, `KillCredit1`, `KillCredit2`, `modelid1`, `modelid2`, `modelid3`, `modelid4`, `name`, `subname`, `IconName`, `gossip_menu_id`, `minlevel`, `maxlevel`, `exp`, `faction`, `npcflag`, `speed_walk`, `speed_run`, `scale`, `rank`, `dmgschool`, `BaseAttackTime`, `RangeAttackTime`, `BaseVariance`, `RangeVariance`, `unit_class`, `unit_flags`, `unit_flags2`, `dynamicflags`, `family`, `type`, `type_flags`, `lootid`, `pickpocketloot`, `skinloot`, `PetSpellDataId`, `VehicleId`, `mingold`, `maxgold`, `AIName`, `MovementType`, `HoverHeight`, `HealthModifier`, `ManaModifier`, `ArmorModifier`, `DamageModifier`, `ExperienceModifier`, `RacialLeader`, `movementId`, `RegenHealth`, `mechanic_immune_mask`, `spell_school_immune_mask`, `flags_extra`, `ScriptName`, `VerifiedBuild`) VALUES 
++(@CREATURE_ID, 0, 0, 0, 0, 0, 19633, 0, 0, 0, 'Vashaar', 'Racial Shift', '', 0, 80, 80, 0, 35, 3, 1, 1.14286, 0.85, 0, 0, 2000, 2000, 1, 1, 1, 2, 2048, 0, 0, 10, 1048576, 0, 0, 0, 0, 0, 0, 0, '', 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 'npc_racial_shift', 12340);
++
++DELETE FROM `npc_text` WHERE `npc_text`.`ID` BETWEEN 931100 AND 931111;
++INSERT INTO `npc_text` (`ID`, `text0_0`, `text0_1`, `BroadcastTextID0`, `lang0`, `Probability0`, `EmoteDelay0_0`, `Emote0_0`, `EmoteDelay0_1`, `Emote0_1`, `EmoteDelay0_2`, `Emote0_2`, `text1_0`, `text1_1`, `BroadcastTextID1`, `lang1`, `Probability1`, `EmoteDelay1_0`, `Emote1_0`, `EmoteDelay1_1`, `Emote1_1`, `EmoteDelay1_2`, `Emote1_2`, `text2_0`, `text2_1`, `BroadcastTextID2`, `lang2`, `Probability2`, `EmoteDelay2_0`, `Emote2_0`, `EmoteDelay2_1`, `Emote2_1`, `EmoteDelay2_2`, `Emote2_2`, `text3_0`, `text3_1`, `BroadcastTextID3`, `lang3`, `Probability3`, `EmoteDelay3_0`, `Emote3_0`, `EmoteDelay3_1`, `Emote3_1`, `EmoteDelay3_2`, `Emote3_2`, `text4_0`, `text4_1`, `BroadcastTextID4`, `lang4`, `Probability4`, `EmoteDelay4_0`, `Emote4_0`, `EmoteDelay4_1`, `Emote4_1`, `EmoteDelay4_2`, `Emote4_2`, `text5_0`, `text5_1`, `BroadcastTextID5`, `lang5`, `Probability5`, `EmoteDelay5_0`, `Emote5_0`, `EmoteDelay5_1`, `Emote5_1`, `EmoteDelay5_2`, `Emote5_2`, `text6_0`, `text6_1`, `BroadcastTextID6`, `lang6`, `Probability6`, `EmoteDelay6_0`, `Emote6_0`, `EmoteDelay6_1`, `Emote6_1`, `EmoteDelay6_2`, `Emote6_2`, `text7_0`, `text7_1`, `BroadcastTextID7`, `lang7`, `Probability7`, `EmoteDelay7_0`, `Emote7_0`, `EmoteDelay7_1`, `Emote7_1`, `EmoteDelay7_2`, `Emote7_2`, `VerifiedBuild`) VALUES 
++(931100, 'Greetings, $n.$B$BI can help you with changing your racial traits. I will make you forget all your current racial abilities of $r, so you can learn something new. As a $c, you can learn only racial abilities of a race that can also be a $c.$b$bWhat race interests you?', '', 0, 0, 1, 0, 1, 0, 1, 0, 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
++(931101, 'Human can:$b$b- Stealth detection increased.$b$b- Increased Spirit.$b$b- Bonus to reputation gains.$b$b- Increased expertise with Swords and Maces.$b$b- Can break out of speed altering and trapping effects.', '', 0, 0, 1, 0, 1, 0, 1, 0, 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
++(931102, 'Orc can:$b$b- May enrage to increase damage.$b$b- Resistant to stun effects.$b$b- Damage done by pets increased.$b$b- Increased expertise with Axes and Fist weapons.', '', 0, 0, 1, 0, 1, 0, 1, 0, 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
++(931103, 'Dwarf can:$b$b- May take on a stone form.$b$b- Increased critical chance with Guns.$b$b- Resistant to Frost.$b$b- Treasure finding.$b$b- Increased expertise with Maces.', '', 0, 0, 1, 0, 1, 0, 1, 0, 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
++(931104, 'Night Elf can:$b$b- May fade into shadows.$b$b- More difficult to hit.$b$b- Wisp form while dead for faster movement.$b$b- Resistant to Nature damage.', '', 0, 0, 1, 0, 1, 0, 1, 0, 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
++(931105, 'Undead can:$b$b- Can remove fear, sleep, and charm.$b$b- May consume corpses to regain health.$b$b- Underwater breathing increased.$b$b- Resistant to Shadow damage.', '', 0, 0, 1, 0, 1, 0, 1, 0, 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
++(931106, 'Tauren can:$b$b- May stomp, stunning nearby opponents.$b$b- Maximum health increased.$b$b- Herbalism skill increased.$b$b- Resistant to Nature damage.', '', 0, 0, 1, 0, 1, 0, 1, 0, 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
++(931107, 'Gnome can:$b$b- May escape from speed altering effects.$b$b- Increased Intelligence.$b$b- Resistant to Arcane damage.$b$b- Engineering skill increased.', '', 0, 0, 1, 0, 1, 0, 1, 0, 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
++(931108, 'Troll can:$b$b- Berserk, increasing attack and casting speed.$b$b- Regeneration increased.$b$b- Damage increased versus beasts.$b$b- Increased critical chance with Throwing Weapons and Bows.$b$b- Reduced duration of movement reducing effect.', '', 0, 0, 1, 0, 1, 0, 1, 0, 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
++(931109, 'Blood Elf can:$b$b- Enchanting skill increased.$b$b- May restore mana, energy, or runic power.$b$b- May silence nearby opponents.$b$b- Resistant to magical damage.', '', 0, 0, 1, 0, 1, 0, 1, 0, 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
++(931110, 'Draenei can:$b$b- Jewelcrafting skill increased.$b$b- May heal self or others over time.$b$b- Party members\' chance to hit with melee and spells increased.$b$b- Resistant to Shadow damage.', '', 0, 0, 1, 0, 1, 0, 1, 0, 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
++(931111, 'Racial Shift feature is disabled.', '', 0, 0, 1, 0, 1, 0, 1, 0, 1, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
++
++SET @CREATURE_GUID := 400000;
++DELETE FROM `creature` WHERE `guid`=@CREATURE_GUID;
++INSERT INTO `creature` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`) VALUES 
++(@CREATURE_GUID, @CREATURE_ID, 571, 0, 0, 1, 1, 0, -1, 5808.31, 645.45, 647.51, 1.51748, 300, 0, 0, 2614, 0, 0, 0, 0, 0, '', 0);
+diff --git a/src/server/database/Database/Implementation/CharacterDatabase.cpp b/src/server/database/Database/Implementation/CharacterDatabase.cpp
+index 87af6be580..cf74fe496a 100644
+--- a/src/server/database/Database/Implementation/CharacterDatabase.cpp
++++ b/src/server/database/Database/Implementation/CharacterDatabase.cpp
+@@ -65,7 +65,7 @@ void CharacterDatabaseConnection::DoPrepareStatements()
+                      "position_x, position_y, position_z, map, orientation, taximask, cinematic, totaltime, leveltime, rest_bonus, logout_time, is_logout_resting, resettalents_cost, "
+                      "resettalents_time, trans_x, trans_y, trans_z, trans_o, transguid, extra_flags, stable_slots, at_login, zone, online, death_expire_time, taxi_path, instance_mode_mask, "
+                      "arenaPoints, totalHonorPoints, todayHonorPoints, yesterdayHonorPoints, totalKills, todayKills, yesterdayKills, chosenTitle, knownCurrencies, watchedFaction, drunk, "
+-                     "health, power1, power2, power3, power4, power5, power6, power7, instance_id, talentGroupsCount, activeTalentGroup, exploredZones, equipmentCache, ammoId, knownTitles, actionBars, grantableLevels, fishingSteps "
++                     "health, power1, power2, power3, power4, power5, power6, power7, instance_id, talentGroupsCount, activeTalentGroup, exploredZones, equipmentCache, ammoId, knownTitles, actionBars, grantableLevels, fishingSteps, chosen_racial "
+                      "FROM characters c LEFT JOIN character_fishingsteps cfs ON c.guid = cfs.guid WHERE c.guid = ?", CONNECTION_ASYNC);
+ 
+     PrepareStatement(CHAR_SEL_GROUP_MEMBER, "SELECT guid FROM group_member WHERE memberGuid = ?", CONNECTION_BOTH);
+@@ -344,14 +344,14 @@ void CharacterDatabaseConnection::DoPrepareStatements()
+                      "extra_flags, stable_slots, at_login, zone, "
+                      "death_expire_time, taxi_path, arenaPoints, totalHonorPoints, todayHonorPoints, yesterdayHonorPoints, totalKills, "
+                      "todayKills, yesterdayKills, chosenTitle, knownCurrencies, watchedFaction, drunk, health, power1, power2, power3, "
+-                     "power4, power5, power6, power7, latency, talentGroupsCount, activeTalentGroup, exploredZones, equipmentCache, ammoId, knownTitles, actionBars, grantableLevels) VALUES "
+-                     "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", CONNECTION_ASYNC);
++                     "power4, power5, power6, power7, latency, talentGroupsCount, activeTalentGroup, exploredZones, equipmentCache, ammoId, knownTitles, actionBars, grantableLevels, chosen_racial) VALUES "
++                     "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", CONNECTION_ASYNC);
+     PrepareStatement(CHAR_UPD_CHARACTER, "UPDATE characters SET name=?,race=?,class=?,gender=?,level=?,xp=?,money=?,skin=?,face=?,hairStyle=?,hairColor=?,facialStyle=?,bankSlots=?,restState=?,playerFlags=?,"
+                      "map=?,instance_id=?,instance_mode_mask=?,position_x=?,position_y=?,position_z=?,orientation=?,trans_x=?,trans_y=?,trans_z=?,trans_o=?,transguid=?,taximask=?,cinematic=?,totaltime=?,leveltime=?,rest_bonus=?,"
+                      "logout_time=?,is_logout_resting=?,resettalents_cost=?,resettalents_time=?,extra_flags=?,stable_slots=?,at_login=?,zone=?,death_expire_time=?,taxi_path=?,"
+                      "arenaPoints=?,totalHonorPoints=?,todayHonorPoints=?,yesterdayHonorPoints=?,totalKills=?,todayKills=?,yesterdayKills=?,chosenTitle=?,knownCurrencies=?,"
+                      "watchedFaction=?,drunk=?,health=?,power1=?,power2=?,power3=?,power4=?,power5=?,power6=?,power7=?,latency=?,talentGroupsCount=?,activeTalentGroup=?,exploredZones=?,"
+-                     "equipmentCache=?,ammoId=?,knownTitles=?,actionBars=?,grantableLevels=?,online=? WHERE guid=?", CONNECTION_ASYNC);
++                     "equipmentCache=?,ammoId=?,knownTitles=?,actionBars=?,grantableLevels=?,chosen_racial=?,online=? WHERE guid=?", CONNECTION_ASYNC);
+ 
+     PrepareStatement(CHAR_UPD_ADD_AT_LOGIN_FLAG, "UPDATE characters SET at_login = at_login | ? WHERE guid = ?", CONNECTION_ASYNC);
+     PrepareStatement(CHAR_UPD_REM_AT_LOGIN_FLAG, "UPDATE characters set at_login = at_login & ~ ? WHERE guid = ?", CONNECTION_ASYNC);
+diff --git a/src/server/game/Entities/Player/Player.cpp b/src/server/game/Entities/Player/Player.cpp
+index 8c3fcafaf8..e68f650bf0 100644
+--- a/src/server/game/Entities/Player/Player.cpp
++++ b/src/server/game/Entities/Player/Player.cpp
+@@ -1919,6 +1919,7 @@ void Player::AddToWorld()
+     ///- It will crash when updating the ObjectAccessor
+     ///- The player should only be added when logging in
+     Unit::AddToWorld();
++    UpdateRacialSpells();
+ 
+     for (uint8 i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; ++i)
+         if (m_items[i])
+@@ -17150,8 +17151,8 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
+     //"resettalents_time, trans_x, trans_y, trans_z, trans_o, transguid, extra_flags, stable_slots, at_login, zone, online, death_expire_time, taxi_path, instance_mode_mask, "
+     // 44           45                46                47                    48          49          50              51           52               53              54
+     //"arenaPoints, totalHonorPoints, todayHonorPoints, yesterdayHonorPoints, totalKills, todayKills, yesterdayKills, chosenTitle, knownCurrencies, watchedFaction, drunk, "
+-    // 55      56      57      58      59      60      61      62      63           64                 65                 66             67              68      69           70          71               72
+-    //"health, power1, power2, power3, power4, power5, power6, power7, instance_id, talentGroupsCount, activeTalentGroup, exploredZones, equipmentCache, ammoId, knownTitles, actionBars, grantableLevels, fishing_steps FROM characters WHERE guid = '%u'", guid);
++    // 55      56      57      58      59      60      61      62      63           64                 65                 66             67              68      69           70          71                    72            73
++    //"health, power1, power2, power3, power4, power5, power6, power7, instance_id, talentGroupsCount, activeTalentGroup, exploredZones, equipmentCache, ammoId, knownTitles, actionBars, grantableLevels, fishing_steps, chosen_racial FROM characters WHERE guid = '%u'", guid);
+     PreparedQueryResult result = holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_FROM);
+     if (!result)
+     {
+@@ -17868,6 +17869,8 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
+ 
+     _LoadEquipmentSets(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_EQUIPMENT_SETS));
+ 
++    _chosenRacial = fields[73].GetUInt32();
++
+     return true;
+ }
+ 
+@@ -19417,6 +19420,7 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create /* = false
+         stmt->setString(index++, ss.str());
+         stmt->setUInt8(index++, GetByteValue(PLAYER_FIELD_BYTES, PLAYER_FIELD_BYTES_OFFSET_ACTION_BAR_TOGGLES));
+         stmt->setUInt32(index++, m_grantableLevels);
++        stmt->setUInt32(index++, _chosenRacial);
+     }
+     else
+     {
+@@ -19542,6 +19546,7 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create /* = false
+         stmt->setString(index++, ss.str());
+         stmt->setUInt8(index++, GetByteValue(PLAYER_FIELD_BYTES, PLAYER_FIELD_BYTES_OFFSET_ACTION_BAR_TOGGLES));
+         stmt->setUInt32(index++, m_grantableLevels);
++        stmt->setUInt32(index++, _chosenRacial);
+ 
+         stmt->setUInt8(index++, IsInWorld() && !GetSession()->PlayerLogout() ? 1 : 0);
+         // Index
+@@ -26958,6 +26963,118 @@ std::string Player::GetDebugInfo() const
+     return sstr.str();
+ }
+ 
++uint8 Player::GetRacial() const
++{
++    if (!_chosenRacial)
++        return GetRace();
++
++    return _chosenRacial;
++}
++
++struct CustomRacialData
++{
++    constexpr CustomRacialData(uint8 race, uint32 classMask, uint32 spellID) : Race(race), ClassMask(classMask), SpellID(spellID) { }
++
++    uint8 Race = RACE_NONE;
++    uint32 ClassMask = CLASSMASK_NONE;
++    uint32 SpellID = 0;
++};
++
++constexpr std::array RacialsLookupTable
++{
++    CustomRacialData(RACE_HUMAN, CLASSMASK_NONE, 58985), // Perception
++    CustomRacialData(RACE_HUMAN, CLASSMASK_NONE, 20597), // Sword Specialization
++    CustomRacialData(RACE_HUMAN, CLASSMASK_NONE, 20598), // The Human Spirit
++    CustomRacialData(RACE_HUMAN, CLASSMASK_NONE, 20599), // Diplomacy
++    CustomRacialData(RACE_HUMAN, CLASSMASK_NONE, 20864), // Mace Specialization
++    CustomRacialData(RACE_HUMAN, CLASSMASK_NONE, 59752), // Every Man for Himself
++
++    CustomRacialData(RACE_DWARF, CLASSMASK_NONE, 59224), // Mace Specialization
++    CustomRacialData(RACE_DWARF, CLASSMASK_NONE, 20596), // Frost Resistance
++    CustomRacialData(RACE_DWARF, CLASSMASK_NONE, 20595), // Gun Specialization
++    CustomRacialData(RACE_DWARF, CLASSMASK_NONE, 2481), // Find Treasure
++    CustomRacialData(RACE_DWARF, CLASSMASK_NONE, 20594), // Stoneform
++
++    CustomRacialData(RACE_NIGHTELF, CLASSMASK_NONE, 20585), // Wisp Spirit
++    CustomRacialData(RACE_NIGHTELF, CLASSMASK_NONE, 21009), // Elusiveness
++    CustomRacialData(RACE_NIGHTELF, CLASSMASK_NONE, 20583), // Nature Resistance
++    CustomRacialData(RACE_NIGHTELF, CLASSMASK_NONE, 20582), // Quickness
++    CustomRacialData(RACE_NIGHTELF, CLASSMASK_NONE, 58984), // Shadowmeld
++
++    CustomRacialData(RACE_GNOME, CLASSMASK_NONE, 20592), // Arcane Resistance
++    CustomRacialData(RACE_GNOME, CLASSMASK_NONE, 20591), // Expansive Mind
++    CustomRacialData(RACE_GNOME, CLASSMASK_NONE, 20593), // Engineering Specialization
++    CustomRacialData(RACE_GNOME, CLASSMASK_NONE, 20589), // Escape Artist
++
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_WARRIOR + CLASSMASK_ROGUE + CLASSMASK_WARLOCK + CLASSMASK_DRUID, 59221), // Shadow Resistance
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_SHAMAN, 59540), // Shadow Resistance
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_PRIEST, 59538), // Shadow Resistance
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_MAGE, 59541), // Shadow Resistance
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_DEATH_KNIGHT, 59539), // Shadow Resistance
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_HUNTER, 59536), // Shadow Resistance
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_PALADIN, 59535), // Shadow Resistance
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_NONE, 28875), // Gemcutting
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_PRIEST + CLASSMASK_SHAMAN + CLASSMASK_MAGE + CLASSMASK_WARLOCK, 28878), // Heroic Presence
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_WARRIOR + CLASSMASK_PALADIN + CLASSMASK_HUNTER + CLASSMASK_ROGUE + CLASSMASK_DEATH_KNIGHT + CLASSMASK_DRUID, 6562), // Heroic Presence
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_WARRIOR, 28880), // Gift of the Naaru (Attack Power)
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_PALADIN, 59542), // Gift of the Naaru (Attack Power or Spell Power)
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_HUNTER, 59543), // Gift of the Naaru (Attack Power)
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_PRIEST, 59544), // Gift of the Naaru (Spell Power)
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_DEATH_KNIGHT + CLASSMASK_ROGUE, 59545), // Gift of the Naaru (Attack Power)
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_SHAMAN + CLASSMASK_DRUID, 59547), // Gift of the Naaru (Attack Power or Spell Power)
++    CustomRacialData(RACE_DRAENEI, CLASSMASK_MAGE + CLASSMASK_WARLOCK, 59548), // Gift of the Naaru (Spell Power)
++
++    CustomRacialData(RACE_ORC, CLASSMASK_NONE, 20573), // Hardiness
++    CustomRacialData(RACE_ORC, CLASSMASK_NONE, 20574), // Axe Specialization
++    CustomRacialData(RACE_ORC, CLASSMASK_HUNTER, 20576), // Command
++    CustomRacialData(RACE_ORC, CLASSMASK_WARRIOR + CLASSMASK_ROGUE + CLASSMASK_SHAMAN + CLASSMASK_PALADIN + CLASSMASK_PRIEST + CLASSMASK_MAGE + CLASSMASK_DRUID, 21563), // Command
++    CustomRacialData(RACE_ORC, CLASSMASK_WARLOCK, 20575), // Command
++    CustomRacialData(RACE_ORC, CLASSMASK_DEATH_KNIGHT, 54562), // Command
++    CustomRacialData(RACE_ORC, CLASSMASK_WARRIOR + CLASSMASK_HUNTER + CLASSMASK_ROGUE + CLASSMASK_DEATH_KNIGHT, 20572), // Blood Fury (Attack Power)
++    CustomRacialData(RACE_ORC, CLASSMASK_SHAMAN + CLASSMASK_DRUID + CLASSMASK_PALADIN, 33697), // Blood Fury (Spell Power and Attack Power)
++    CustomRacialData(RACE_ORC, CLASSMASK_WARLOCK + CLASSMASK_PRIEST + CLASSMASK_MAGE, 33702), // Blood Fury (Spell Power)
++
++    CustomRacialData(RACE_UNDEAD_PLAYER, CLASSMASK_NONE, 5227), // Underwater Breathing
++    CustomRacialData(RACE_UNDEAD_PLAYER, CLASSMASK_NONE, 20579), // Shadow Resistance
++    CustomRacialData(RACE_UNDEAD_PLAYER, CLASSMASK_NONE, 20577), // Cannibalize
++    CustomRacialData(RACE_UNDEAD_PLAYER, CLASSMASK_NONE, 7744), // Will of the Forsaken
++
++    CustomRacialData(RACE_TAUREN, CLASSMASK_NONE, 20551), // Nature Resistance
++    CustomRacialData(RACE_TAUREN, CLASSMASK_NONE, 20550), // Endurance
++    CustomRacialData(RACE_TAUREN, CLASSMASK_NONE, 20552), // Cultivation
++    CustomRacialData(RACE_TAUREN, CLASSMASK_NONE, 20549), // War Stomp
++
++    CustomRacialData(RACE_TROLL, CLASSMASK_NONE, 20555), // Regeneration
++    CustomRacialData(RACE_TROLL, CLASSMASK_NONE, 20557), // Beast Slaying
++    CustomRacialData(RACE_TROLL, CLASSMASK_NONE, 20558), // Throwing Specialization
++    CustomRacialData(RACE_TROLL, CLASSMASK_NONE, 26290), // Bow Specialization
++    CustomRacialData(RACE_TROLL, CLASSMASK_NONE, 58943), // Da Voodoo Shuffle
++    CustomRacialData(RACE_TROLL, CLASSMASK_NONE, 26297), // Berserking
++
++    CustomRacialData(RACE_BLOODELF, CLASSMASK_NONE, 28877), // Arcane Affinity
++    CustomRacialData(RACE_BLOODELF, CLASSMASK_NONE, 822), // Magic Resistance
++    CustomRacialData(RACE_BLOODELF, CLASSMASK_WARRIOR + CLASSMASK_PALADIN + CLASSMASK_HUNTER + CLASSMASK_PRIEST + CLASSMASK_SHAMAN + CLASSMASK_MAGE + CLASSMASK_WARLOCK + CLASSMASK_DRUID, 28730), // Arcane Torrent (Mana)
++    CustomRacialData(RACE_BLOODELF, CLASSMASK_ROGUE, 25046), // Arcane Torrent (Energy)
++    CustomRacialData(RACE_BLOODELF, CLASSMASK_DEATH_KNIGHT, 50613), // Arcane Torrent (Runic Power)
++};
++
++void Player::UpdateRacialSpells()
++{
++    uint32 const racialAllianceMask = sWorld->getIntConfig(CONFIG_RACIAL_SHIFT_ALLIANCE);
++    uint32 const racialHordeMask = sWorld->getIntConfig(CONFIG_RACIAL_SHIFT_HORDE);
++    TeamId const playerTeamID = GetTeamId();
++    if (!((playerTeamID == TEAM_HORDE && racialHordeMask & (1 << GetRace())) || (playerTeamID == TEAM_ALLIANCE && racialAllianceMask & (1 << GetRace()))))
++        _chosenRacial = 0;
++
++    for (auto const& customRacialData : RacialsLookupTable)
++    {
++        if (customRacialData.Race == GetRacial() && (customRacialData.ClassMask == 1 || customRacialData.ClassMask & (1 << GetClass())))
++            LearnSpell(customRacialData.SpellID, true);
++        else
++            RemoveSpell(customRacialData.SpellID);
++    }
++}
++
+ GameClient* Player::GetGameClient() const
+ {
+     return GetSession()->GetGameClient();
+diff --git a/src/server/game/Entities/Player/Player.h b/src/server/game/Entities/Player/Player.h
+index b5ddaca836..a441532fc5 100644
+--- a/src/server/game/Entities/Player/Player.h
++++ b/src/server/game/Entities/Player/Player.h
+@@ -2182,6 +2182,10 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
+ 
+         std::string GetDebugInfo() const override;
+ 
++        uint8 GetRacial() const;
++        void OverrideRacial(uint8 const race) { _chosenRacial = race; }
++        void UpdateRacialSpells();
++
+     protected:
+         // Gamemaster whisper whitelist
+         GuidList WhisperList;
+@@ -2509,6 +2513,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
+         uint32 manaBeforeDuel;
+ 
+         WorldLocation _corpseLocation;
++
++        // used for Racial Shift system
++        uint32 _chosenRacial = 0;
+ };
+ 
+ TC_GAME_API void AddItemsSetItem(Player* player, Item* item);
+diff --git a/src/server/game/World/World.cpp b/src/server/game/World/World.cpp
+index 2d8882dcae..8d7d6af370 100644
+--- a/src/server/game/World/World.cpp
++++ b/src/server/game/World/World.cpp
+@@ -1543,6 +1543,11 @@ void World::LoadConfigSettings(bool reload)
+     // Specifies if IP addresses can be logged to the database
+     m_bool_configs[CONFIG_ALLOW_LOGGING_IP_ADDRESSES_IN_DATABASE] = sConfigMgr->GetBoolDefault("AllowLoggingIPAddressesInDatabase", true, true);
+ 
++    // Racial Shift
++    m_bool_configs[CONFIG_RACIAL_SHIFT_ENABLED] = sConfigMgr->GetBoolDefault("RacialShift.Enabled", true, true);
++    m_int_configs[CONFIG_RACIAL_SHIFT_HORDE] = sConfigMgr->GetIntDefault("RacialShift.HordeEnabledRacials", RACEMASK_ALL, true);
++    m_int_configs[CONFIG_RACIAL_SHIFT_ALLIANCE] = sConfigMgr->GetIntDefault("RacialShift.AllianceEnabledRacials", RACEMASK_ALL, true);
++
+     // call ScriptMgr if we're reloading the configuration
+     if (reload)
+         sScriptMgr->OnConfigLoad(reload);
+diff --git a/src/server/game/World/World.h b/src/server/game/World/World.h
+index eeda8e6970..35d0b7cff1 100644
+--- a/src/server/game/World/World.h
++++ b/src/server/game/World/World.h
+@@ -178,6 +178,7 @@ enum WorldBoolConfigs
+     CONFIG_RESPAWN_DYNAMIC_ESCORTNPC,
+     CONFIG_REGEN_HP_CANNOT_REACH_TARGET_IN_RAID,
+     CONFIG_ALLOW_LOGGING_IP_ADDRESSES_IN_DATABASE,
++    CONFIG_RACIAL_SHIFT_ENABLED,
+     BOOL_CONFIG_VALUE_COUNT
+ };
+ 
+@@ -397,6 +398,8 @@ enum WorldIntConfigs
+     CONFIG_RESPAWN_GUIDWARNING_FREQUENCY,
+     CONFIG_SOCKET_TIMEOUTTIME_ACTIVE,
+     CONFIG_PENDING_MOVE_CHANGES_TIMEOUT,
++    CONFIG_RACIAL_SHIFT_HORDE,
++    CONFIG_RACIAL_SHIFT_ALLIANCE,
+     INT_CONFIG_VALUE_COUNT
+ };
+ 
+diff --git a/src/server/scripts/World/npcs_special.cpp b/src/server/scripts/World/npcs_special.cpp
+index 55e6b4169c..d53611d8f2 100644
+--- a/src/server/scripts/World/npcs_special.cpp
++++ b/src/server/scripts/World/npcs_special.cpp
+@@ -2446,6 +2446,155 @@ private:
+     TaskScheduler _scheduler;
+ };
+ 
++enum RacialShiftGossips
++{
++    RACIAL_MAIN_GOSSIP_TEXT     = 931100,
++
++    RACIAL_CHOOSE_RACE_HUMAN    = 931101,
++    RACIAL_CHOOSE_RACE_ORC      = 931102,
++    RACIAL_CHOOSE_RACE_DWARF    = 931103,
++    RACIAL_CHOOSE_RACE_NIGHTELF = 931104,
++    RACIAL_CHOOSE_RACE_UNDEAD   = 931105,
++    RACIAL_CHOOSE_RACE_TAUREN   = 931106,
++    RACIAL_CHOOSE_RACE_GNOME    = 931107,
++    RACIAL_CHOOSE_RACE_TROLL    = 931108,
++    RACIAL_CHOOSE_RACE_BLOODELF = 931109,
++    RACIAL_CHOOSE_RACE_DRAENEI  = 931110,
++
++    RACIAL_NPC_DISABLED         = 931111,
++
++    GOSSIP_GO_TO_MAIN_MENU      = GOSSIP_ACTION_INFO_DEF + 1
++};
++
++struct RacialShiftRaceData
++{
++    uint32 Sender = 0;
++    std::string_view GossipMale;
++    std::string_view GossipFemale;
++    uint32 AllowedClasses = 0;
++};
++
++static const std::map<uint32, RacialShiftRaceData> RacialShiftData
++{
++    { RACE_HUMAN,{ RACIAL_CHOOSE_RACE_HUMAN,
++        "|TInterface/ICONS/Achievement_character_human_male:30:30:-18:0|t Will of the Human.",
++        "|TInterface/ICONS/Achievement_character_human_female:30:30:-18:0|t Will of the Human.",
++        CLASSMASK_WARRIOR + CLASSMASK_PALADIN + CLASSMASK_ROGUE + CLASSMASK_PRIEST + CLASSMASK_MAGE + CLASSMASK_WARLOCK + CLASSMASK_DEATH_KNIGHT } },
++
++    { RACE_ORC, { RACIAL_CHOOSE_RACE_ORC,
++        "|TInterface/ICONS/Achievement_character_orc_male:30:30:-18:0|t Bravery of the Orc.",
++        "|TInterface/ICONS/Achievement_character_orc_female:30:30:-18:0|t Bravery of the Orc.",
++        CLASSMASK_WARRIOR + CLASSMASK_HUNTER + CLASSMASK_ROGUE + CLASSMASK_SHAMAN + CLASSMASK_WARLOCK + CLASSMASK_DEATH_KNIGHT } },
++
++    { RACE_DWARF, { RACIAL_CHOOSE_RACE_DWARF,
++        "|TInterface/ICONS/Achievement_character_dwarf_male:30:30:-18:0|t Path of the Dwarf.",
++        "|TInterface/ICONS/Achievement_character_dwarf_female:30:30:-18:0|t Path of the Dwarf.",
++        CLASSMASK_WARRIOR + CLASSMASK_PALADIN + CLASSMASK_HUNTER + CLASSMASK_ROGUE + CLASSMASK_PRIEST + CLASSMASK_DEATH_KNIGHT } },
++
++    { RACE_NIGHTELF, { RACIAL_CHOOSE_RACE_NIGHTELF,
++        "|TInterface/ICONS/Achievement_character_nightelf_male:30:30:-18:0|t Way of the Night Elf.",
++        "|TInterface/ICONS/Achievement_character_nightelf_female:30:30:-18:0|t Way of the Night Elf.",
++        CLASSMASK_WARRIOR + CLASSMASK_HUNTER + CLASSMASK_ROGUE + CLASSMASK_PRIEST + CLASSMASK_DRUID + CLASSMASK_DEATH_KNIGHT } },
++
++    { RACE_UNDEAD_PLAYER, { RACIAL_CHOOSE_RACE_UNDEAD,
++        "|TInterface/ICONS/Achievement_character_undead_male:30:30:-18:0|t Shadow of the Undead.",
++        "|TInterface/ICONS/Achievement_character_undead_female:30:30:-18:0|t Shadow of the Undead.",
++        CLASSMASK_WARRIOR + CLASSMASK_ROGUE + CLASSMASK_PRIEST + CLASSMASK_MAGE + CLASSMASK_WARLOCK + CLASSMASK_DEATH_KNIGHT } },
++
++    { RACE_TAUREN, { RACIAL_CHOOSE_RACE_TAUREN,
++        "|TInterface/ICONS/Achievement_character_tauren_male:30:30:-18:0|t Nature of the Tauren.",
++        "|TInterface/ICONS/Achievement_character_tauren_female:30:30:-18:0|t Nature of the Tauren.",
++        CLASSMASK_WARRIOR + CLASSMASK_HUNTER + CLASSMASK_SHAMAN + CLASSMASK_DRUID + CLASSMASK_DEATH_KNIGHT }
++    },
++    { RACE_GNOME, { RACIAL_CHOOSE_RACE_GNOME,
++        "|TInterface/ICONS/Achievement_character_gnome_male:30:30:-18:0|t Mind of the Gnome.",
++        "|TInterface/ICONS/Achievement_character_gnome_female:30:30:-18:0|t Mind of the Gnome.",
++        CLASSMASK_WARRIOR + CLASSMASK_ROGUE + CLASSMASK_MAGE + CLASSMASK_WARLOCK + CLASSMASK_DEATH_KNIGHT } },
++
++    { RACE_TROLL, { RACIAL_CHOOSE_RACE_TROLL,
++        "|TInterface/ICONS/Achievement_character_troll_male:30:30:-18:0|t Voodoo of the Troll.",
++        "|TInterface/ICONS/Achievement_character_troll_female:30:30:-18:0|t Voodoo of the Troll.",
++        CLASSMASK_WARRIOR + CLASSMASK_HUNTER + CLASSMASK_ROGUE + CLASSMASK_PRIEST + CLASSMASK_SHAMAN + CLASSMASK_MAGE + CLASSMASK_DEATH_KNIGHT } },
++
++    { RACE_BLOODELF, { RACIAL_CHOOSE_RACE_BLOODELF,
++        "|TInterface/ICONS/Achievement_character_bloodelf_male:30:30:-18:0|t Secrets of the Blood Elf.",
++        "|TInterface/ICONS/Achievement_character_bloodelf_female:30:30:-18:0|t Secrets of the Blood Elf.",
++        CLASSMASK_PALADIN + CLASSMASK_HUNTER + CLASSMASK_ROGUE + CLASSMASK_PRIEST + CLASSMASK_MAGE + CLASSMASK_WARLOCK + CLASSMASK_DEATH_KNIGHT } },
++
++    { RACE_DRAENEI, { RACIAL_CHOOSE_RACE_DRAENEI,
++        "|TInterface/ICONS/Achievement_character_draenei_male:30:30:-18:0|t Wisdom of the Draenei.",
++        "|TInterface/ICONS/Achievement_character_draenei_female:30:30:-18:0|t Wisdom of the Draenei.",
++        CLASSMASK_WARRIOR + CLASSMASK_PALADIN + CLASSMASK_HUNTER + CLASSMASK_PRIEST + CLASSMASK_SHAMAN + CLASSMASK_MAGE + CLASSMASK_DEATH_KNIGHT } },
++};
++
++struct npc_racial_shift final : ScriptedAI
++{
++    explicit npc_racial_shift(Creature* creature) : ScriptedAI(creature) { }
++
++    void AddGossipForRace(Player* player, uint8 const race) const
++    {
++        if (race == player->GetRacial())
++            return;
++
++        uint32 const racialAllianceMask = sWorld->getIntConfig(CONFIG_RACIAL_SHIFT_ALLIANCE);
++        uint32 const racialHordeMask = sWorld->getIntConfig(CONFIG_RACIAL_SHIFT_HORDE);
++        TeamId const playerTeamID = player->GetTeamId();
++        if (!((playerTeamID == TEAM_HORDE && racialHordeMask & (1 << race)) || (playerTeamID == TEAM_ALLIANCE && racialAllianceMask & (1 << race))))
++            return;
++
++        auto const&[sender, gossipFemale, gossipMale, allowedClasses] = RacialShiftData.at(race);
++        if (!(allowedClasses & (1 << player->GetClass())))
++            return;
++
++        AddGossipItemFor(player, GOSSIP_ICON_MONEY_BAG, player->GetGender() == GENDER_FEMALE ? gossipFemale.data() : gossipMale.data(), sender, race);
++    }
++
++    bool OnGossipHello(Player* player) override
++    {
++        if (!sWorld->getBoolConfig(CONFIG_RACIAL_SHIFT_ENABLED))
++        {
++            SendGossipMenuFor(player, RACIAL_NPC_DISABLED, me->GetGUID());
++            return true;
++        }
++
++        for (Races const race : { RACE_HUMAN, RACE_DWARF, RACE_NIGHTELF, RACE_GNOME, RACE_DRAENEI, RACE_ORC, RACE_UNDEAD_PLAYER, RACE_TAUREN, RACE_TROLL, RACE_BLOODELF })
++            AddGossipForRace(player, static_cast<uint8>(race));
++
++        SendGossipMenuFor(player, RACIAL_MAIN_GOSSIP_TEXT, me->GetGUID());
++        return true;
++    }
++
++    bool OnGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
++    {
++        uint32 const sender = player->PlayerTalkClass->GetGossipOptionSender(gossipListId);
++        uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
++        if (sender == GOSSIP_SENDER_INFO)
++        {
++            if (action == GOSSIP_GO_TO_MAIN_MENU)
++            {
++                player->PlayerTalkClass->ClearMenus();
++                OnGossipHello(player);
++                return true;
++            }
++
++            player->OverrideRacial(static_cast<uint8>(action));
++            player->UpdateRacialSpells();
++            CloseGossipMenuFor(player);
++            return true;
++        }
++
++        if (sender >= RACIAL_CHOOSE_RACE_HUMAN && sender <= RACIAL_CHOOSE_RACE_DRAENEI)
++        {
++            ClearGossipMenuFor(player);
++            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "I want to change racials to this race.", GOSSIP_SENDER_INFO, action, "Are you sure? This cannot be undone.", 0, false);
++            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Go back.", GOSSIP_SENDER_INFO, GOSSIP_GO_TO_MAIN_MENU);
++            SendGossipMenuFor(player, sender, me);
++        }
++
++        return true;
++    }
++};
++
+ void AddSC_npcs_special()
+ {
+     new npc_air_force_bots();
+@@ -2472,4 +2621,5 @@ void AddSC_npcs_special()
+     new npc_argent_squire_gruntling();
+     new npc_bountiful_table();
+     RegisterCreatureAI(npc_gen_void_zone);
++    RegisterCreatureAI(npc_racial_shift);
+ }
+diff --git a/src/server/shared/SharedDefines.h b/src/server/shared/SharedDefines.h
+index fe3382876b..0ed9c92f28 100644
+--- a/src/server/shared/SharedDefines.h
++++ b/src/server/shared/SharedDefines.h
+@@ -106,6 +106,24 @@ enum Races
+     //RACE_ICE_TROLL          = 21
+ };
+ 
++enum RaceMask
++{
++    RACEMASK_NONE           = 1 << 0, // 0
++    RACEMASK_HUMAN          = 1 << 1, // 2
++    RACEMASK_ORC            = 1 << 2, // 4
++    RACEMASK_DWARF          = 1 << 3, // 8
++    RACEMASK_NIGHTELF       = 1 << 4, // 16
++    RACEMASK_UNDEAD_PLAYER  = 1 << 5, // 32
++    RACEMASK_TAUREN         = 1 << 6, // 64
++    RACEMASK_GNOME          = 1 << 7, // 128
++    RACEMASK_TROLL          = 1 << 8, // 256
++    RACEMASK_BLOODELF       = 1 << 10, // 1024
++    RACEMASK_DRAENEI        = 1 << 11, // 2048
++
++    // 3582
++    RACEMASK_ALL = RACEMASK_HUMAN | RACEMASK_ORC | RACEMASK_DWARF | RACEMASK_NIGHTELF | RACEMASK_UNDEAD_PLAYER | RACEMASK_TAUREN | RACEMASK_GNOME | RACEMASK_TROLL | RACEMASK_BLOODELF | RACEMASK_DRAENEI
++};
++
+ // max+1 for player race
+ #define MAX_RACES         12
+ 
+@@ -139,6 +157,21 @@ enum Classes
+     CLASS_DRUID         = 11 // TITLE Druid
+ };
+ 
++enum RaceClassMask
++{
++    CLASSMASK_NONE              = 1 << 0, // 0
++    CLASSMASK_WARRIOR           = 1 << 1, // 2
++    CLASSMASK_PALADIN           = 1 << 2, // 4
++    CLASSMASK_HUNTER            = 1 << 3, // 8
++    CLASSMASK_ROGUE             = 1 << 4, // 16
++    CLASSMASK_PRIEST            = 1 << 5, // 32
++    CLASSMASK_DEATH_KNIGHT      = 1 << 6, // 64
++    CLASSMASK_SHAMAN            = 1 << 7, // 128
++    CLASSMASK_MAGE              = 1 << 8, // 256
++    CLASSMASK_WARLOCK           = 1 << 9, // 512
++    CLASSMASK_DRUID             = 1 << 11, // 2048
++};
++
+ // max+1 for player class
+ #define MAX_CLASSES       12
+ 
+-- 
+2.29.2.windows.2
+

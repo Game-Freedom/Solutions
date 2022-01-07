@@ -8,7 +8,7 @@ Racial Shift is a system allowing players to swap their set of racial abilities 
 There is limitation in place which allow to take racials only from the race allowing your class, for example, a Rogue is unable to pick Tauren racials, as Rogue class is unavailable for Tauren.
 
 ## Requirements
-TrinityCore (branch 3.3.5)
+TrinityCore (branch 3.3.5) 
 ```
 git clone https://github.com/TrinityCore/TrinityCore.git
 git checkout 3.3.5
